@@ -2516,6 +2516,11 @@ kind-of@^6.0.0, kind-of@^6.0.2:
   resolved "https://registry.yarnpkg.com/kind-of/-/kind-of-6.0.2.tgz#01146b36a6218e64e58f3a8d66de5d7fc6f6d051"
   integrity sha512-s5kLOcnH0XqDO+FvuaLX8DDjZ18CGFk7VygH40QoKPUQhW4e2rvM0rwUq0t8IQDOwYSeLK01U90OjzBTme2QqA==
 
+kontra@^7.1.2:
+  version "7.1.2"
+  resolved "https://registry.yarnpkg.com/kontra/-/kontra-7.1.2.tgz#01d97552f019828dd095cd9b757f67481d4973ca"
+  integrity sha512-o0rD+8llwthGZOnji1K9cmlzDQq3HMLp2U2loTxPE4ILE2YllO6WRCMQxcxzipC3cBXfd5kJEcAi6C5h1UGxWQ==
+
 lazystream@^1.0.0:
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/lazystream/-/lazystream-1.0.0.tgz#f6995fe0f820392f61396be89462407bb77168e4"

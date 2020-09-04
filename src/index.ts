@@ -1,94 +1,113 @@
-import croissantImage from "../assets/croissant.png";
+import kontra, { init, Sprite, GameLoop, SpriteSheet, imageAssets, initKeys, keyPressed } from 'kontra' 
 
-const canvas: HTMLCanvasElement = document.createElement("canvas");
-const ctx: CanvasRenderingContext2D = canvas.getContext("2d");
-const MOVING_SPEED = 2;
-const width = 320;
-const height = 240;
+let { canvas } = init()
 
-canvas.id = "game";
-canvas.width = width;
-canvas.height = height;
-const div = document.createElement("div");
-div.appendChild(canvas);
-document.body.appendChild(canvas);
 
-const image = new Image();
-image.src = croissantImage;
+let frogo = new Image()
+frogo.src = 'assets/images/frog.gif'
+frogo.onload = function() {
+}
 
-const player: pos = {
-	x: width / 2,
-	y: height / 2
+let spriteSheet = SpriteSheet({
+	image: frogo,
+	frameWidth: 16,
+	frameHeight: 16,
+	animations: {
+		jump: {
+			frames: '0..1',
+			frameRate: 10, 
+		}
+	}
+})
+
+let sprite = Sprite({
+	x:256,
+	y:256,
+	dy:0,
+	dx:0,
+	animations: spriteSheet.animations
+})
+
+let lefty_state = false;
+interface FGState {
+	p1key_up: boolean,
+	p1key_down: boolean,
+	p1key_left: boolean,
+	p1key_right: boolean,
+	p1key_jump: boolean,
+
+}
+
+let state : FGState = {
+	p1key_up: false,
+	p1key_down: false,
+	p1key_left: false,
+	p1key_right: false,
+	p1key_jump: false,
 };
 
-const inputState: InputState = {
-	left: false,
-	right: false,
-	up: false,
-	down: false
-};
+initKeys();
+let loop = GameLoop({
 
-function tick(t: number) {
-	requestAnimationFrame(tick);
-	ctx.clearRect(0, 0, canvas.width, canvas.height);
-	if (inputState.left) player.x -= MOVING_SPEED;
-	if (inputState.right) player.x += MOVING_SPEED;
-	if (inputState.up) player.y -= MOVING_SPEED;
-	if (inputState.down) player.y += MOVING_SPEED;
-	player.x = clamp(player.x, 0, canvas.width - 16);
-	player.y = clamp(player.y, 0, canvas.height - 16);
+	update: function() {
+		sprite.update()
 
-	ctx.drawImage(image, player.x, player.y);
-}
+		
+		if (sprite.y < 0) {
+			sprite.y = 512
+		}
 
-requestAnimationFrame(tick);
+		if (sprite.x < 0) {
+			sprite.x = 512
+		}
 
-window.addEventListener("keydown", (e: KeyboardEvent) => {
-	switch (e.key) {
-		case "ArrowLeft":
-			inputState.left = true;
-			break;
-		case "ArrowRight":
-			inputState.right = true;
-			break;
-		case "ArrowUp":
-			inputState.up = true;
-			break;
-		case "ArrowDown":
-			inputState.down = true;
-			break;
+		if (sprite.y > 512) {
+			sprite.y = 0
+		}
+		if (sprite.x > 512) {
+			sprite.x = 0
+		}
+
+		state.p1key_up = keyPressed('w')
+		state.p1key_left = keyPressed('a')
+		state.p1key_down = keyPressed('s')
+		state.p1key_right = keyPressed('d')
+		state.p1key_jump = keyPressed('space')
+
+		const swp = 3.14
+		if (state.p1key_jump) {
+			sprite.y = sprite.y - swp*swp;
+		}
+
+		if (state.p1key_up) {
+			//sprite.dy = -swp;
+			sprite.y = sprite.y - swp
+		}
+
+		if (state.p1key_down) {
+			//sprite.dy = swp;
+			sprite.y = sprite.y + swp
+		}
+		if (state.p1key_left) {
+			//sprite.dx = -swp;
+			sprite.x = sprite.x - swp
+		}
+
+		if (state.p1key_right) {
+			//sprite.dx = swp;
+			sprite.x = sprite.x + swp
+		}
+
+
+		//sprite.playAnimation('jump');
+
+	},
+
+	render: function() {
+		sprite.render()
 	}
-});
+})
 
-window.addEventListener("keyup", (e: KeyboardEvent) => {
-	switch (e.key) {
-		case "ArrowLeft":
-			inputState.left = false;
-			break;
-		case "ArrowRight":
-			inputState.right = false;
-			break;
-		case "ArrowUp":
-			inputState.up = false;
-			break;
-		case "ArrowDown":
-			inputState.down = false;
-			break;
-	}
-});
+loop.start();
 
-function clamp(num: number, min: number, max: number): number {
-	return Math.min(Math.max(num, min), max);
-}
 
-interface InputState {
-	left: boolean;
-	right: boolean;
-	up: boolean;
-	down: boolean;
-}
-
-interface pos {
-	x: number;
-	y: number;
-}
