@@ -1,10 +1,10 @@
 /* Frog Jumper
    - JS13K Game Entry 2020
    - 404 Challenge... wheres my semi colons ToT
-   - (c) Rob Murrer sans the frog.gif from opengameart.org o/
+   - (c) Rob Murrer sans the frog.gif & chicken.pngfrom opengameart.org o/
 */
 
-import kontra, { init, Sprite, GameLoop, SpriteSheet, imageAssets, initKeys, keyPressed } from 'kontra' 
+import kontra from 'kontra'
 
 const GAME_SIZE = 512
 const SPRITE_SIZE = 16
@@ -35,15 +35,13 @@ let state : FGState = {
 };
 
 //must do this first!!!
-let { canvas } = init()
-initKeys();
+let { canvas } = kontra.init()
+kontra.initKeys();
 
-//load sprite... should consider going full pixel art bitmap in source
-//this is why i don't understand javascripts
 let frogo = new Image()
-frogo.src = 'assets/images/frog.gif'
+frogo.src = 't.png'
 frogo.onload = function() {
-	let spriteSheet = SpriteSheet({
+	let frogo_sheet = kontra.SpriteSheet({
 		image: frogo,
 		frameWidth: SPRITE_SIZE,
 		frameHeight: SPRITE_SIZE,
@@ -62,21 +60,44 @@ frogo.onload = function() {
 		}
 	})
 
+	let chicko_sheet = kontra.SpriteSheet({
+		image: frogo, 
+		frameWidth: SPRITE_SIZE*4,
+		frameHeight: SPRITE_SIZE*4,
+		animations: {
+			stay:
+			{
+				frames:0,
+			},
+			walk:
+			{
+				frames: '1..2',
+				frameRate: 10,
+			}
+		}
+	})
+
+	let p1 = kontra.Sprite({
+		x:GAME_SIZE/2,
+		y:GAME_SIZE/2,
+		animations: chicko_sheet.animations,
+	})
+
 	
 	let sprites = []
 	for (let i=0; i<100; i++)
 	{
-		let sprite = Sprite({
+		let sprite = kontra.Sprite({
 			x:(i+SPRITE_SIZE*i*i)%GAME_SIZE,
 			y:kontra.randInt(0, SPRITE_SIZE),
-			dy: 0.51 + kontra.randInt(0, SPRITE_SIZE)*.1,
-			dx: 1 * kontra.randInt(0,1)*-1 + kontra.randInt(0, SPRITE_SIZE)*.1,
-			animations: spriteSheet.animations
+			dx: kontra.randInt(0,1)*-1 + (kontra.randInt(0, SPRITE_SIZE)*.1),
+			dy: kontra.randInt(0,1)*-1 + (kontra.randInt(0, SPRITE_SIZE)*.1),
+			animations: frogo_sheet.animations
 		})
 		sprites.push(sprite)
 	}
 
-	let loop = GameLoop({
+	let loop = kontra.GameLoop({
 		update: function() {
 			state.p1key_up.old = state.p1key_up.new
 			state.p1key_left.old = state.p1key_left.new
@@ -84,83 +105,74 @@ frogo.onload = function() {
 			state.p1key_right.old = state.p1key_right.new
 			state.p1key_jump.old = state.p1key_jump.new
 
-			state.p1key_up.new= keyPressed('w')
-			state.p1key_left.new = keyPressed('a')
-			state.p1key_down.new = keyPressed('s')
-			state.p1key_right.new = keyPressed('d')
-			state.p1key_jump.new = keyPressed('space')
+			state.p1key_up.new= kontra.keyPressed('w')
+			state.p1key_left.new = kontra.keyPressed('a')
+			state.p1key_down.new = kontra.keyPressed('s')
+			state.p1key_right.new = kontra.keyPressed('d')
+			state.p1key_jump.new = kontra.keyPressed('space')
 
 			const swp = 3.14/1.0
 			
-			sprites.map( x => x.y > GAME_SIZE ? x.y = -SPRITE_SIZE : x.y = x.y)
-			sprites.map( x => x.x > GAME_SIZE ? x.dx = -x.dx : x.dx = x.dx)
-			sprites.map( x => x.x === 0 ? x.dx = -x.dx : x.dx = x.dx)
-			sprites.map( x => x.playAnimation(kontra.randInt(0,10) === 1 ? 'stay' : 'turbo'))
-			sprites.map( x => x.update())
+			sprites.map(x => function () {
+				if (x.y > GAME_SIZE || x.y < 0) {
+					x.dy = -x.dy
+				} 
 
-			/*
-			let moving = false
+				if (x.x > GAME_SIZE || x.x === 0) {
+					x.dx = -x.dx
+				}
+
+				x.playAnimation(kontra.randInt(0,100) === 1 ? 'stay' : 'turbo')
+				x.update()
+
+			}())//gotta execute it w. the () at the end of function {}() :D
+
+			let moving = true
 			let jumping = false
 			if (state.p1key_jump.new) {
-				sprite.y = sprite.y - swp*swp;
-				moving = true
-				jumping = true
-				sprite.playAnimation('turbo')
+				p1.y = p1.y - swp*swp;
+				//p1.playAnimation('turbo')
 			}
 
 			if (state.p1key_up.new) {
 				//sprite.dy = -swp;
-				sprite.y = sprite.y - swp
-				moving = true
-				sprite.playAnimation('jump')
+				p1.y = p1.y - swp
+				//p1.playAnimation('jump')
 			}
 
 			if (state.p1key_down.new) {
 				//sprite.dy = swp;
-				sprite.y = sprite.y + swp
-				moving = true
-				sprite.playAnimation('jump')
+				p1.y = p1.y + swp
+				//sprite.playAnimation('jump')
 			}
 			if (state.p1key_left.new) {
 				//sprite.dx = -swp;
-				sprite.x = sprite.x - swp
-				moving = true
-				sprite.playAnimation('jump')
+				p1.x = p1.x - swp
+				//p1.playAnimation('jump')
 			}
 
 			if (state.p1key_right.new) {
 				//sprite.dx = swp;
-				sprite.x = sprite.x + swp
-				moving = true
-				sprite.playAnimation('jump')
+				p1.x = p1.x + swp
+				//sprite.playAnimation('jump')
 			}
 
-			if (sprite.y <= SPRITE_SIZE*4)
-			{
-				console.log('boom')
-				sprite.dy = 0
-				moving = false
+			if (moving) {
+				p1.playAnimation('walk')
+			}
+			else {
+				p1.playAnimation('stay')
 			}
 
-			if (!moving) {
-				sprite.playAnimation('stay')
-				sprite.dy = 0.1
-			}
-
-
-			sprite.update()
-
-			if (sprite.y < 0) {
-				state.p1wins = true
-			}
-			*/
-
+			p1.update()
 		},
 
 		render: function() {
 			
 			sprites.map( x => x.render())
+			p1.render()
 
+			/*
 			let score = kontra.Text({
 				text: 'FROG JUMPER',
 				font: '64px Chalkboard, Comic Sans',
@@ -172,6 +184,7 @@ frogo.onload = function() {
 			})
 
 			score.render();	
+			*/
 
 		},
 	})
