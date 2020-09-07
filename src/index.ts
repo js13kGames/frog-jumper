@@ -4,7 +4,7 @@
    - (c) Rob Murrer sans the frog.gif & chicken.pngfrom opengameart.org o/
 */
 
-import kontra from 'kontra'
+import {init, initKeys, SpriteSheet, Sprite, randInt, GameLoop, keyPressed} from 'kontra'
 
 const GAME_SIZE = 512
 const SPRITE_SIZE = 16
@@ -35,13 +35,13 @@ let state : FGState = {
 };
 
 //must do this first!!!
-let { canvas } = kontra.init()
-kontra.initKeys();
+let { canvas } = init()
+initKeys();
 
 let frogo = new Image()
 frogo.src = 't.png'
 frogo.onload = function() {
-	let frogo_sheet = kontra.SpriteSheet({
+	let frogo_sheet = SpriteSheet({
 		image: frogo,
 		frameWidth: SPRITE_SIZE,
 		frameHeight: SPRITE_SIZE,
@@ -60,7 +60,7 @@ frogo.onload = function() {
 		}
 	})
 
-	let chicko_sheet = kontra.SpriteSheet({
+	let chicko_sheet = SpriteSheet({
 		image: frogo, 
 		frameWidth: SPRITE_SIZE*4,
 		frameHeight: SPRITE_SIZE*4,
@@ -77,7 +77,7 @@ frogo.onload = function() {
 		}
 	})
 
-	let p1 = kontra.Sprite({
+	let p1 = Sprite({
 		x:GAME_SIZE/2,
 		y:GAME_SIZE/2,
 		animations: chicko_sheet.animations,
@@ -87,17 +87,17 @@ frogo.onload = function() {
 	let sprites = []
 	for (let i=0; i<100; i++)
 	{
-		let sprite = kontra.Sprite({
+		let sprite = Sprite({
 			x:(i+SPRITE_SIZE*i*i)%GAME_SIZE,
-			y:kontra.randInt(0, SPRITE_SIZE),
-			dx: kontra.randInt(0,1)*-1 + (kontra.randInt(0, SPRITE_SIZE)*.1),
-			dy: kontra.randInt(0,1)*-1 + (kontra.randInt(0, SPRITE_SIZE)*.1),
+			y: randInt(0, SPRITE_SIZE),
+			dx: randInt(0,1)*-1 + (randInt(0, SPRITE_SIZE)*.1),
+			dy: randInt(0,1)*-1 + (randInt(0, SPRITE_SIZE)*.1),
 			animations: frogo_sheet.animations
 		})
 		sprites.push(sprite)
 	}
 
-	let loop = kontra.GameLoop({
+	let loop = GameLoop({
 		update: function() {
 			state.p1key_up.old = state.p1key_up.new
 			state.p1key_left.old = state.p1key_left.new
@@ -105,11 +105,11 @@ frogo.onload = function() {
 			state.p1key_right.old = state.p1key_right.new
 			state.p1key_jump.old = state.p1key_jump.new
 
-			state.p1key_up.new= kontra.keyPressed('w')
-			state.p1key_left.new = kontra.keyPressed('a')
-			state.p1key_down.new = kontra.keyPressed('s')
-			state.p1key_right.new = kontra.keyPressed('d')
-			state.p1key_jump.new = kontra.keyPressed('space')
+			state.p1key_up.new= keyPressed('w')
+			state.p1key_left.new = keyPressed('a')
+			state.p1key_down.new = keyPressed('s')
+			state.p1key_right.new = keyPressed('d')
+			state.p1key_jump.new = keyPressed('space')
 
 			const swp = 3.14/1.0
 			
@@ -122,7 +122,7 @@ frogo.onload = function() {
 					x.dx = -x.dx
 				}
 
-				x.playAnimation(kontra.randInt(0,100) === 1 ? 'stay' : 'turbo')
+				x.playAnimation(randInt(0,100) === 1 ? 'stay' : 'turbo')
 				x.update()
 
 			}())//gotta execute it w. the () at the end of function {}() :D
