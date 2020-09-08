@@ -8,7 +8,8 @@
    - o/
 */
 
-import {init, initKeys, SpriteSheet, Sprite, randInt, GameLoop, keyPressed} from 'kontra'
+import {init, initKeys, SpriteSheet, Sprite, randInt, GameLoop, keyPressed, Button, initPointer, onPointerDown} from 'kontra'
+import { zzfx } from './third/ZzFX.micro.js'
 
 const GAME_SIZE = 512
 const FROG_SIZE = 16 
@@ -41,6 +42,11 @@ let state : FGState = {
 //must do this first!!!
 let { canvas } = init()
 initKeys()
+initPointer()
+
+onPointerDown(function(e, object) {
+	zzfx(...[,,210,.03,,,,.85,-46,,,,,.7,,,.04,,.03,.74]); // Blip 54
+})
 
 let frogo = new Image()
 frogo.src = 't.png'
@@ -102,6 +108,22 @@ frogo.onload = function() {
 		sprites.push(sprite)
 	}
 
+	let button = Button({
+		x: GAME_SIZE/2,
+		y: GAME_SIZE/2,
+		text: {
+			text: 'START',
+		},
+
+		render() {
+			if (this.pressed) {
+				zzfx(...[,,29,.03,.02,.18,1,1.14,-3.6,,,,,,4.7,,,.75,.07]); // Jump 18
+			}
+
+
+		}
+	})
+
 	let loop = GameLoop({
 		update: function() {
 			state.p1key_up.old = state.p1key_up.new
@@ -132,30 +154,12 @@ frogo.onload = function() {
 
 			}())//gotta execute it w. the () at the end of function {}() :D
 
-			var arr = [],
-			volume = 0.01,
-			seconds = 1,
-			tone = 111 
-
-			for (var i = 0; i < context.sampleRate * seconds; i++) {
-				arr[i] = sineWaveAt(i, tone) * volume
-			}
-
-			var bock = [],
-			volume = 0.03,
-			seconds = .1,
-			tone = 333
-
-			for (var i = 0; i < context.sampleRate * seconds; i++) {
-				bock[i] = sineWaveAt(i, tone) * volume 
-			}
-
 			let moving = true
 			let jumping = false
 			if (state.p1key_attack.new) {
 				p1.x = p1.x + swp*swp;
 				//p1.playAnimation('turbo')
-				playSound(bock)
+				zzfx(...[,,1516,,.04,.15,,.01,,,562,.06,,,,,.09,.62,.02]); // Pickup 29
 			}
 
 			if (state.p1key_up.new) {
@@ -163,27 +167,27 @@ frogo.onload = function() {
 				p1.y = p1.y - swp*swp
 				p1.dy = 2 
 				//p1.playAnimation('jump')
-				playSound(arr)
+				zzfx(...[,,29,.03,.02,.18,1,1.14,-3.6,,,,,,4.7,,,.75,.07]); // Jump 18
 			}
 
 			if (state.p1key_down.new) {
 				//sprite.dy = swp;
 				p1.y = p1.y + swp
+				zzfx(...[,,210,.03,,,,.85,-46,,,,,.7,,,.04,,.03,.74]); // Blip 54
 				//sprite.playAnimation('jump')
-				playSound(arr)
 			}
 			if (state.p1key_left.new) {
 				//sprite.dx = -swp;
 				p1.x = p1.x - swp
 				//p1.playAnimation('jump')
-				playSound(arr)
+				zzfx(...[,,210,.03,,,,.85,-46,,,,,.7,,,.04,,.03,.74]); // Blip 54
 			}
 
 			if (state.p1key_right.new) {
 				//sprite.dx = swp;
 				p1.x = p1.x + swp
 				//sprite.playAnimation('jump')
-				playSound(arr)
+				zzfx(...[,,210,.03,,,,.85,-46,,,,,.7,,,.04,,.03,.74]); // Blip 54
 			}
 
 			if (moving) {
@@ -205,36 +209,9 @@ frogo.onload = function() {
 			
 			sprites.map( x => x.render())
 			p1.render()
+			button.render()
 		},
 	})
-
-	var AudioContext = window.AudioContext // Default
-    || window.webkitAudioContext // Safari and old versions of Chrome
-    || false; 
-	var context = new AudioContext();
-	function playSound(arr) {
-		var buf = new Float32Array(arr.length)
-		for (var i = 0; i < arr.length; i++) buf[i] = arr[i]
-		var buffer = context.createBuffer(1, buf.length, context.sampleRate)
-		if(buffer.copyToChannel)
-        {
-            buffer.copyToChannel(buf, 0);
-        }
-        else
-        {
-            // Safari doesn't support copyToChannel yet. See #286
-            buffer.getChannelData(0).set(buf);
-        }
-		var source = context.createBufferSource();
-		source.buffer = buffer;
-		source.connect(context.destination);
-		source.start(0);
-	}
-
-	function sineWaveAt(sampleNumber, tone) {
-		var sampleFreq = context.sampleRate / tone
-		return Math.sin(sampleNumber / (sampleFreq / (Math.PI * 2)))
-	}
 
 	loop.start()
 }
