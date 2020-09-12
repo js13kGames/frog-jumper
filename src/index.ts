@@ -43,11 +43,13 @@ interface FJState {
 
 	frogs: number,
 
+	jump_started: boolean,
 	jump_x: number,
 	jump_y: number,
 	jump_clock: number,
 	jumping: boolean,
-
+	
+	frogo_right: boolean,
 	speed: number,
 
 	tap: boolean,
@@ -66,11 +68,13 @@ let state : FJState = {
 	chest: [],
 	frogs: 0,
 
+	jump_started: false,
 	jump_x: 0,
 	jump_y: 0,
 	jumping: false,
 	jump_clock: 0,
 
+	frogo_right: true,
 	speed: 0,
 
 	tap: false,
@@ -119,7 +123,6 @@ onPointerDown(function(e, object) { //global play to turn on sounds in safari :D
 
 onPointerUp(function(e, object) {
 	zzfx(...[,,210,.03,,,,.85,-46,,,,,.7,,,.04,,.03,.74]); // Blip 54
-	state.tap = false 
 })
 
 let frogo = new Image()
@@ -191,6 +194,35 @@ frogo.onload = function() {
 		chest_wave_vect: [0, 0, 1, 0],
 	}
 
+	let level_one: FJLevel = {
+		seed: 0,
+		sky_colors: ['lightblue',],
+		sky_emojis: ['☁',],
+
+		background_colors: ['darkblue',],
+		background_emojis: ['🌲'],
+
+		field_colors: ['#89d69e',],
+		field_emojis: ['🍒', '🧚‍♀️'],
+		field_emojis_func: [1,10],
+
+		floor_colors: ['green',],
+		floor_emojis: ['🍄', '🍉'],
+		floor_emojis_func: [1, -1],
+
+		hi_enemies: ['🦅'],
+		hi_enemies_vects: [[-1, -1]],
+		hi_enemies_vuln: [0,],
+
+		lo_enemies: ['🦂'],
+		lo_enemies_vects: [[-1, 0]],
+		lo_enemies_vuln: [0,],
+
+		chest_emojis: ['🥾', '🎩'],
+		enemy_wave_vect: [0, 1, 2, 3],
+		chest_wave_vect: [0, 0, 1, 0],
+	}
+
 	
 	const SKY = 300
 	const FIELD = SKY + 100 
@@ -205,7 +237,8 @@ frogo.onload = function() {
 	let frog = Sprite({
 		x: p1.x + 4*FROG_SIZE, 
 		y: FLOOR + 2*FROG_SIZE + 5, 
-		animations: frogo_sheet.animations
+		animations: frogo_sheet.animations,
+		dx: -1
 	})
 
 	let floor = Sprite({
@@ -280,7 +313,7 @@ frogo.onload = function() {
 						x: 0, 
 						y: -64, 
 						color: 'darkgreen', 
-						font: '64px futura',
+						font: '64px Monaco, Consolas',
 					})
 
 					field.addChild(title)
@@ -301,18 +334,52 @@ frogo.onload = function() {
 
 			}
 
-			if (state.tap) {
+			p1.dy = p1.dy + 0.1
+			frog.dx = frog.dx - 0.005
 
+			if (p1.y > FLOOR) {
+				p1.dy = 0
+				p1.dx = 0
+				p1.playAnimation('walk')
+				frog.playAnimation('jump')
+				state.jumping = false
+				state.jump_started = false
+			}
+			else {
+			}
+
+			if (frog.x < FROG_SIZE) {
+				frog.dx = 1 
+			}
+
+			
+
+			if (state.tap) {
+				if (state.jump_started) {
+					console.log('in air')
+				}
+				else {
+					p1.playAnimation('stay')
+					state.jump_clock = performance.now()
+					state.jump_x = p1.x
+					state.jump_y = p1.y
+					state.jumping = true
+					p1.dy = -5
+					//p1.dx = 1
+					state.jump_started = true
+				}
+
+				state.tap = false
 			}
 
 			state.frame_count++
 			//todo clean up stuff
-			if (state.frame_count%(100/state.speed) === 0) {
+			if (state.frame_count%(500/state.speed) === 0) {
 				state.screen++
 				console.log('nol')
 				for (let i = 0; i < randInt(0, 5); i++) {
 					let s = Text({
-						font: "14px arial",
+						font: "12px Helvetica",
 						text: level.sky_emojis[i % level.sky_emojis.length],
 						x: GAME_SIZE + randInt(0, GAME_SIZE),
 						y: randInt(0, SKY - 4 * FROG_SIZE),
@@ -327,7 +394,7 @@ frogo.onload = function() {
 
 				for (let i = 0; i < randInt(0, 5); i++) {
 					let s = Text({
-						font: "14px arial",
+						font: "12px arial",
 						text: level.background_emojis[i % level.background_emojis.length],
 						x: GAME_SIZE + randInt(0, GAME_SIZE),
 						y: -50, 
