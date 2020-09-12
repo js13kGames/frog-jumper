@@ -5,47 +5,121 @@
 		   - frog.gif  ...
 		   - chicken.png from opengameart.org
 		   - kontra.js - Lambert
+		   - zzfx sound effects
    - o/
 */
 
-import {init, initKeys, SpriteSheet, Sprite, randInt, GameLoop, keyPressed, Button, initPointer, onPointerDown} from 'kontra'
+import {
+	init, 
+	initKeys, 
+	SpriteSheet, 
+	Sprite, 
+	randInt,
+	GameLoop, 
+	keyPressed, 
+	Button, 
+	initPointer, 
+	onPointerDown, 
+	onPointerUp, 
+	Text, 
+	clamp, 
+ 	seedRand
+	} from 'kontra'
+
 import { zzfx } from './third/ZzFX.micro.js'
 
 const GAME_SIZE = 512
 const FROG_SIZE = 16 
 
-interface KeyDelta
-{
-	old: boolean,
-	new: boolean,
+interface FJState {
+	screen: number,
+	frame_count: number;
+	score: number,
+	lives: number,
+	level: number,
+	difficulty: number,
+
+	chest: [],
+
+	frogs: number,
+
+	jump_x: number,
+	jump_y: number,
+	jump_clock: number,
+	jumping: boolean,
+
+	speed: number,
+
+	tap: boolean,
+
 }
 
-interface FGState {
-	p1wins: boolean;
-	p1key_up: KeyDelta,
-	p1key_down: KeyDelta,
-	p1key_left: KeyDelta,
-	p1key_right: KeyDelta,
-	p1key_attack: KeyDelta,
 
+let state : FJState = {
+	screen: 0,
+	frame_count: 0,
+	score: 0,
+	difficulty: 0,
+	lives: 3,
+	level: 0,
+
+	chest: [],
+	frogs: 0,
+
+	jump_x: 0,
+	jump_y: 0,
+	jumping: false,
+	jump_clock: 0,
+
+	speed: 0,
+
+	tap: false,
 }
 
-let state : FGState = {
-	p1wins: false,
-	p1key_up: {old: false, new: false}, 
-	p1key_down: {old: false, new: false},
-	p1key_left: {old: false, new: false},
-	p1key_right: {old: false, new: false},
-	p1key_attack: {old: false, new: false},
-};
+interface FJLevel {
+	seed: number,
+	sky_colors: string[], 
+	sky_emojis: string[], 
+
+	background_colors: string[],
+	background_emojis: string[],
+
+	field_colors: string[], 
+	field_emojis:string[],
+	field_emojis_func: number[],
+
+	floor_colors: string[], 
+	floor_emojis: string[],
+	floor_emojis_func: number[],
+
+	hi_enemies: string[],
+	hi_enemies_vuln: number[],
+	hi_enemies_vects: number[][], 
+
+	lo_enemies: string[],
+	lo_enemies_vuln: number[],
+	lo_enemies_vects: number[][],
+	
+	enemy_wave_vect: number[],
+	chest_wave_vect: number[],
+	chest_emojis: string[],
+}
+
 
 //must do this first!!!
 let { canvas } = init()
 initKeys()
 initPointer()
 
-onPointerDown(function(e, object) {
+onPointerDown(function(e, object) { //global play to turn on sounds in safari :D
 	zzfx(...[,,210,.03,,,,.85,-46,,,,,.7,,,.04,,.03,.74]); // Blip 54
+	//zzfx(...[,,1516,,.04,.15,,.01,,,562,.06,,,,,.09,.62,.02]); // Pickup 29
+	state.tap = true
+})
+
+onPointerUp(function(e, object) {
+	zzfx(...[,,210,.03,,,,.85,-46,,,,,.7,,,.04,,.03,.74]); // Blip 54
+	state.tap = false 
 })
 
 let frogo = new Image()
@@ -65,19 +139,20 @@ frogo.onload = function() {
 			},
 			turbo: {
 				frames: '0..1',
-				frameRate: 10, 
+				frameRate: 30, 
 			}
 		}
 	})
 
+	//frogo.width = -frogo.width doesn't flip full sprite sheet... 
 	let chicko_sheet = SpriteSheet({
 		image: frogo, 
-		frameWidth: FROG_SIZE*4,
-		frameHeight: FROG_SIZE*4,
+		frameWidth: 64,
+		frameHeight: 64, 
 		animations: {
 			stay:
 			{
-				frames:0,
+				frames:1,
 			},
 			walk:
 			{
@@ -87,129 +162,234 @@ frogo.onload = function() {
 		}
 	})
 
+	let level_zero: FJLevel = {
+		seed: 0,
+		sky_colors: ['lightblue',],
+		sky_emojis: ['☁️',],
+
+		background_colors: ['darkblue',],
+		background_emojis: ['🌲'],
+
+		field_colors: ['#89d69e',],
+		field_emojis: ['🍒', '🧚‍♀️'],
+		field_emojis_func: [1,10],
+
+		floor_colors: ['green',],
+		floor_emojis: ['🍄', '🍉'],
+		floor_emojis_func: [1, -1],
+
+		hi_enemies: ['🦅'],
+		hi_enemies_vects: [[-1, -1]],
+		hi_enemies_vuln: [0,],
+
+		lo_enemies: ['🦂'],
+		lo_enemies_vects: [[-1, 0]],
+		lo_enemies_vuln: [0,],
+
+		chest_emojis: ['🥾', '🎩'],
+		enemy_wave_vect: [0, 1, 2, 3],
+		chest_wave_vect: [0, 0, 1, 0],
+	}
+
+	
+	const SKY = 300
+	const FIELD = SKY + 100 
+	const FLOOR = GAME_SIZE - 4*FROG_SIZE
+
 	let p1 = Sprite({
-		x:GAME_SIZE/2,
-		y:GAME_SIZE/2,
-		dy:2,
+		x: 4*FROG_SIZE,
+		y: FLOOR,
 		animations: chicko_sheet.animations,
 	})
 
-	
-	let sprites = []
-	for (let i=0; i<10; i++)
-	{
-		let sprite = Sprite({
-			x:(i+FROG_SIZE*i*i)%GAME_SIZE,
-			y: randInt(0, FROG_SIZE*FROG_SIZE),
-			dx: randInt(0,1)*-1 + (randInt(0, FROG_SIZE)*.1),
-			dy: randInt(0,1)*-1 + (randInt(0, FROG_SIZE)*.1),
-			animations: frogo_sheet.animations
-		})
-		sprites.push(sprite)
-	}
-
-	let button = Button({
-		x: GAME_SIZE/2,
-		y: GAME_SIZE/2,
-		text: {
-			text: 'START',
-		},
-
-		render() {
-			if (this.pressed) {
-				zzfx(...[,,29,.03,.02,.18,1,1.14,-3.6,,,,,,4.7,,,.75,.07]); // Jump 18
-			}
-
-
-		}
+	let frog = Sprite({
+		x: p1.x + 4*FROG_SIZE, 
+		y: FLOOR + 2*FROG_SIZE + 5, 
+		animations: frogo_sheet.animations
 	})
 
+	let floor = Sprite({
+		width: GAME_SIZE,
+		height: FROG_SIZE,
+		x:0,
+		y: GAME_SIZE-FROG_SIZE,
+	})
+
+	let field = Sprite({
+		width: GAME_SIZE,
+		height: FIELD,
+		x:0,
+		y: SKY, 
+
+	})
+
+	let sky = Sprite({
+		width: GAME_SIZE,
+		height: SKY,
+		x: 0,
+		y: 0, 
+	})
+
+
+	let level = level_zero
+	let first_time = true 
 	let loop = GameLoop({
 		update: function() {
-			state.p1key_up.old = state.p1key_up.new
-			state.p1key_left.old = state.p1key_left.new
-			state.p1key_down.old = state.p1key_down.new
-			state.p1key_right.old = state.p1key_right.new
-			state.p1key_attack.old = state.p1key_attack.new
+			if (state.frame_count === 0) {
+				if (first_time) {
+					seedRand(level.seed.toString()) //same everytime
 
-			state.p1key_up.new= keyPressed('w') || keyPressed('up')
-			state.p1key_left.new = keyPressed('a') || keyPressed('left')
-			state.p1key_down.new = keyPressed('s') || keyPressed('down')
-			state.p1key_right.new = keyPressed('d') || keyPressed('right')
-			state.p1key_attack.new = keyPressed('space')
+					sky.color = level.sky_colors[0]
+					field.color = level.field_colors[0]
+					floor.color = level.floor_colors[0]
 
-			const swp = 3.14/1.0
-			
-			sprites.map(s => function () {
-				if (s.y > GAME_SIZE - FROG_SIZE|| s.y - FROG_SIZE < 0) {
-					s.dy = -s.dy
-				} 
+					for (let i=0; i< 6; i++) {
+						let s = Text({
+							text: level.sky_emojis[i%level.sky_emojis.length],
+							x: randInt(0, GAME_SIZE),
+							y: randInt(0, SKY-4*FROG_SIZE),
+							scaleX: 5,
+							scaleY: 5,
 
-				if (s.x > GAME_SIZE - FROG_SIZE || s.x - FROG_SIZE < 0) {
-					s.dx = -s.dx
+						})
+
+						sky.addChild(s)
+					}
+
+					for (let i=0; i<3; i++) {
+						let s = Text({
+							text: level.field_emojis[i%level.field_emojis.length],
+							x: randInt(GAME_SIZE/2, GAME_SIZE),
+							y: randInt(0, FIELD)
+						})
+
+						field.addChild(s)
+					}
+					for (let i=0; i<1; i++) {
+						let s = Text({
+							text: level.floor_emojis[i%level.floor_emojis.length],
+							x: randInt(GAME_SIZE/2, GAME_SIZE),
+							y: -10, 
+						})
+
+						floor.addChild(s)
+					}
+
+					let title = Text({
+						text: "FROG JUMPER",
+						x: 0, 
+						y: -64, 
+						color: 'darkgreen', 
+						font: '64px futura',
+					})
+
+					field.addChild(title)
+					first_time = false 
 				}
 
-				s.playAnimation(randInt(0,10) === 1 ? 'stay' : 'turbo')
-				s.update()
 
-			}())//gotta execute it w. the () at the end of function {}() :D
+				if (!state.tap) return
 
-			let moving = true
-			let jumping = false
-			if (state.p1key_attack.new) {
-				p1.x = p1.x + swp*swp;
-				//p1.playAnimation('turbo')
-				zzfx(...[,,1516,,.04,.15,,.01,,,562,.06,,,,,.09,.62,.02]); // Pickup 29
-			}
+				console.log('level started')
+				state.speed = 1
 
-			if (state.p1key_up.new) {
-				//sprite.dy = -swp;
-				p1.y = p1.y - swp*swp
-				p1.dy = 2 
-				//p1.playAnimation('jump')
-				zzfx(...[,,29,.03,.02,.18,1,1.14,-3.6,,,,,,4.7,,,.75,.07]); // Jump 18
-			}
-
-			if (state.p1key_down.new) {
-				//sprite.dy = swp;
-				p1.y = p1.y + swp
-				zzfx(...[,,210,.03,,,,.85,-46,,,,,.7,,,.04,,.03,.74]); // Blip 54
-				//sprite.playAnimation('jump')
-			}
-			if (state.p1key_left.new) {
-				//sprite.dx = -swp;
-				p1.x = p1.x - swp
-				//p1.playAnimation('jump')
-				zzfx(...[,,210,.03,,,,.85,-46,,,,,.7,,,.04,,.03,.74]); // Blip 54
-			}
-
-			if (state.p1key_right.new) {
-				//sprite.dx = swp;
-				p1.x = p1.x + swp
-				//sprite.playAnimation('jump')
-				zzfx(...[,,210,.03,,,,.85,-46,,,,,.7,,,.04,,.03,.74]); // Blip 54
-			}
-
-			if (moving) {
+				sky.children.map(x => x.dx = -state.speed/2)
+				field.children.map(x => x.dx = -state.speed)
+				floor.children.map(x => x.dx = -state.speed*2)
 				p1.playAnimation('walk')
-			}
-			else {
-				p1.playAnimation('stay')
+				frog.playAnimation('jump')
+
 			}
 
-			if (p1.y > GAME_SIZE - 64)
-			{
-				p1.dy = 0;
+			if (state.tap) {
+
 			}
 
-			p1.update()
+			state.frame_count++
+			//todo clean up stuff
+			if (state.frame_count%(100/state.speed) === 0) {
+				state.screen++
+				console.log('nol')
+				for (let i = 0; i < randInt(0, 5); i++) {
+					let s = Text({
+						font: "14px arial",
+						text: level.sky_emojis[i % level.sky_emojis.length],
+						x: GAME_SIZE + randInt(0, GAME_SIZE),
+						y: randInt(0, SKY - 4 * FROG_SIZE),
+						scaleX: 5,
+						scaleY: 5,
+						dx: -state.speed/2
+
+					})
+
+					sky.addChild(s)
+				}
+
+				for (let i = 0; i < randInt(0, 5); i++) {
+					let s = Text({
+						font: "14px arial",
+						text: level.background_emojis[i % level.background_emojis.length],
+						x: GAME_SIZE + randInt(0, GAME_SIZE),
+						y: -50, 
+						scaleX: 4,
+						scaleY: 4,
+						dx: -state.speed/2
+
+					})
+
+					field.addChild(s)
+				}
+
+				for (let i = 0; i < randInt(0, 5); i++) {
+					let s = Text({
+						text: level.field_emojis[i % level.field_emojis.length],
+						x: GAME_SIZE + randInt(0, GAME_SIZE),
+						y: randInt(0, FIELD),
+						dx: -state.speed
+					})
+
+					field.addChild(s)
+				}
+
+				for (let i = 0; i < randInt(0, 1); i++) {
+					let s = Text({
+						text: level.floor_emojis[i % level.floor_emojis.length],
+						x: GAME_SIZE + randInt(0, GAME_SIZE),
+						y: -10,
+						dx: -state.speed*2
+					})
+
+					floor.addChild(s)
+				}
+				if (state.screen === level.enemy_wave_vect.length + 1) {
+					console.log('level done')
+					let s = Text({
+						text: '🏁',
+						x: GAME_SIZE, 
+						y: -20,
+						dx: -state.speed
+					})
+					floor.addChild(s)
+				}
+			}
+
+
+
+
+			sky.update()
+			field.update()
+			floor.update()
+			p1.update() 
+			frog.update()
 		},
 
 		render: function() {
-			
-			sprites.map( x => x.render())
+			sky.render()
+			field.render()
+			floor.render()
+
 			p1.render()
-			button.render()
+			frog.render()
 		},
 	})
 
