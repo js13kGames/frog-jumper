@@ -122,7 +122,6 @@ onPointerDown(function(e, object) { //global play to turn on sounds in safari :D
 })
 
 onPointerUp(function(e, object) {
-	zzfx(...[,,210,.03,,,,.85,-46,,,,,.7,,,.04,,.03,.74]); // Blip 54
 })
 
 let frogo = new Image()
@@ -311,7 +310,6 @@ frogo.onload = function() {
 					let title = Text({
 						text: "FROG JUMPER",
 						x: 0, 
-						y: -64, 
 						color: 'darkgreen', 
 						font: '64px Monaco, Consolas',
 					})
@@ -334,7 +332,7 @@ frogo.onload = function() {
 
 			}
 
-			p1.dy = p1.dy + 0.1
+			p1.dy = p1.dy + 0.2
 			frog.dx = frog.dx - 0.005
 
 			if (p1.y > FLOOR) {
@@ -349,14 +347,24 @@ frogo.onload = function() {
 			}
 
 			if (frog.x < FROG_SIZE) {
-				frog.dx = 1 
+				frog.dx = -frog.dx 
 			}
 
-			
 
 			if (state.tap) {
 				if (state.jump_started) {
 					console.log('in air')
+					if (Math.abs(p1.x - frog.x) < FROG_SIZE) {
+						p1.dy = -10
+						p1.playAnimation('walk')
+						console.log('hit')
+						zzfx(...[,,1516,,.04,.15,,.01,,,562,.06,,,,,.09,.62,.02]); // Pickup 29
+					}
+					else {
+						p1.playAnimation('stay')
+						p1.dy++
+					}
+					
 				}
 				else {
 					p1.playAnimation('stay')
@@ -394,7 +402,7 @@ frogo.onload = function() {
 
 				for (let i = 0; i < randInt(0, 5); i++) {
 					let s = Text({
-						font: "12px arial",
+						font: "12px Helvetica",
 						text: level.background_emojis[i % level.background_emojis.length],
 						x: GAME_SIZE + randInt(0, GAME_SIZE),
 						y: -50, 
@@ -441,6 +449,8 @@ frogo.onload = function() {
 			}
 
 
+			//floor.map( x => {if (Math.abs(x.x - p1.x) < 1) { zzfx(...[,,1516,,.04,.15,,.01,,,562,.06,,,,,.09,.62,.02])}}
+
 
 
 			sky.update()
@@ -455,8 +465,8 @@ frogo.onload = function() {
 			field.render()
 			floor.render()
 
-			p1.render()
 			frog.render()
+			p1.render()
 		},
 	})
 
